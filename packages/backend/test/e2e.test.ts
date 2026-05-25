@@ -84,7 +84,7 @@ beforeAll(async () => {
       databasePath: dbPath,
       jwtSecret: "test-secret-test-secret-test-secret-test-secret",
       frontendOrigin: "http://localhost:5173",
-      nodeEnv: "test"
+      nodeEnv: "production"
     })
   });
 
@@ -144,4 +144,49 @@ test("registers, logs in, creates events, RSVPs, and recommends adjacent-user ev
   expect(recommendations.body.algorithm).toBe("weighted-co-attendance");
   expect(recommendations.body.recommendations[0]?.event.id).toBe(recommendedEventId);
   expect(recommendations.body.recommendations[0]?.score).toBeGreaterThan(0);
+});
+
+test("sets production-safe refresh cookies and rotates them on use", async () => {
+  const original = await request<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({
+      name: "Refresh Reader",
+      email: "refresh@example.com",
+      password: "correct-horse-battery-staple"
+    })
+  });
+  expect(original.status).toBe(201);
+
+  const originalSetCookie = original.headers.get("set-cookie") ?? "";
+  expect(originalSetCookie).toContain("HttpOnly");
+  expect(originalSetCookie).toContain("Secure");
+  expect(originalSetCookie).toContain("SameSite=None");
+
+  const firstCookie = cookieFrom(original.headers);
+  const refreshed = await request<AuthResponse>("/auth/refresh", {
+    method: "POST",
+    headers: { cookie: firstCookie }
+  });
+
+  expect(refreshed.status).toBe(200);
+  expect(refreshed.body.accessToken).not.toBe(original.body.accessToken);
+
+  const rotatedCookie = cookieFrom(refreshed.headers);
+  expect(rotatedCookie).not.toBe(firstCookie);
+
+  const replay = await request<{ error: string }>("/auth/refresh", {
+    method: "POST",
+    headers: { cookie: firstCookie }
+  });
+  expect(replay.status).toBe(401);
+
+  const me = await request<{ user: { email: string } }>("/me", {
+    method: "GET",
+    session: {
+      accessToken: refreshed.body.accessToken,
+      cookie: rotatedCookie
+    }
+  });
+  expect(me.status).toBe(200);
+  expect(me.body.user.email).toBe("refresh@example.com");
 });

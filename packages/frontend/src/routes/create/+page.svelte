@@ -4,7 +4,6 @@
   import { eventCreateBodySchema } from "@poetry/shared";
   import { auth } from "$lib/auth";
   import { createEvent } from "$lib/client";
-  import "$lib/forms";
 
   const queryClient = useQueryClient();
   let title = "";

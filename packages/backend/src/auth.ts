@@ -1,7 +1,7 @@
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context } from "hono";
 import { SignJWT, jwtVerify } from "jose";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Db, UserRow } from "./db.js";
 import { newId } from "./db.js";
 
@@ -27,6 +27,7 @@ export async function createAccessToken(user: TokenUser, secret: string): Promis
   return new SignJWT({ email: user.email, name: user.name })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
+    .setJti(randomUUID())
     .setIssuedAt()
     .setExpirationTime(`${accessTokenTtlSeconds}s`)
     .sign(jwtSecretKey(secret));
@@ -65,7 +66,7 @@ export function setRefreshCookie(c: Context, token: string, secure: boolean): vo
   setCookie(c, refreshCookieName, token, {
     httpOnly: true,
     secure,
-    sameSite: "Lax",
+    sameSite: secure ? "None" : "Lax",
     path: "/",
     maxAge: refreshTokenTtlSeconds
   });
@@ -74,7 +75,7 @@ export function setRefreshCookie(c: Context, token: string, secure: boolean): vo
 export function clearRefreshCookie(c: Context, secure: boolean): void {
   deleteCookie(c, refreshCookieName, {
     secure,
-    sameSite: "Lax",
+    sameSite: secure ? "None" : "Lax",
     path: "/"
   });
 }
