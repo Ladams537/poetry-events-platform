@@ -1,0 +1,23 @@
+{
+  "name": "poetry-events-platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "dev": "pnpm --parallel --filter @poetry/backend --filter @poetry/frontend dev",
+    "test": "pnpm --filter @poetry/backend test",
+    "e2e": "pnpm --filter @poetry/backend test:e2e"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}
